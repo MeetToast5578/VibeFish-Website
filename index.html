@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Play VibeFish</title>
+<meta name="description" content="Play chess against every version of VibeFish, a search-free transformer chess bot, right in your browser.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chessground@9.2.1/assets/chessground.base.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chessground@9.2.1/assets/chessground.brown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chessground@9.2.1/assets/chessground.cburnett.css">
+<style>
+  :root { --bg: #f6f4ef; --fg: #222; --muted: #6b665c; --card: #fff; --line: #ddd8cc; --accent: #2f6f4f; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1b1d1f; --fg: #e8e6e1; --muted: #9a968d; --card: #25282b; --line: #3a3e42; --accent: #6fbf8f; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
+  main { max-width: 1000px; margin: 0 auto; padding: 24px 16px; }
+  h1 { margin: 0; font-size: 1.8rem; }
+  header p { margin: 4px 0 24px; color: var(--muted); }
+  a { color: var(--accent); }
+  .layout { display: grid; grid-template-columns: minmax(0, 560px) minmax(0, 1fr); gap: 24px; align-items: start; }
+  @media (max-width: 760px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+  #board { width: 100%; aspect-ratio: 1; overflow: hidden; }  /* chessground's file labels poke out 2px on phones */
+  .panel { display: grid; gap: 16px; }
+  fieldset { border: 1px solid var(--line); border-radius: 8px; background: var(--card); margin: 0; padding: 12px; }
+  legend { font-weight: 600; padding: 0 4px; }
+  label.opt { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; cursor: pointer; }
+  label.opt small { color: var(--muted); }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; }
+  button { font: inherit; padding: 8px 16px; border-radius: 6px; border: 0; background: var(--accent); color: var(--bg); cursor: pointer; }
+  #status { font-weight: 600; min-height: 1.5em; }
+  #moves { color: var(--muted); font-family: ui-monospace, monospace; font-size: 0.9rem; max-height: 220px; overflow-y: auto; margin: 0; }
+  footer { margin-top: 32px; color: var(--muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>VibeFish</h1>
+    <p>A chess bot with no search: a transformer looks at the board once and picks a move. Pick a version and play. It runs in your browser.</p>
+  </header>
+  <div class="layout">
+    <div id="board"></div>
+    <div class="panel">
+      <fieldset id="versions">
+        <legend>Opponent</legend>
+      </fieldset>
+      <fieldset>
+        <legend>You play</legend>
+        <div class="row">
+          <label class="opt"><input type="radio" name="color" value="white" checked> White</label>
+          <label class="opt"><input type="radio" name="color" value="black"> Black</label>
+        </div>
+      </fieldset>
+      <div><button id="new">New game</button></div>
+      <div id="status" role="status" aria-live="polite"></div>
+      <p id="moves"></p>
+    </div>
+  </div>
+  <footer>
+    Source and training notes: <a href="https://github.com/MeetToast5578/VibeFish-ChessBot">VibeFish-ChessBot</a>.
+    Elo figures are performance ratings against Stockfish's limited-strength levels. You can change the opponent mid-game.
+  </footer>
+</main>
+<script type="module">
+import { Chess } from 'https://cdn.jsdelivr.net/npm/chess.js@1.4.0/+esm';
+import { Chessground } from 'https://cdn.jsdelivr.net/npm/chessground@9.2.1/+esm';
+import * as ort from 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/ort.wasm.min.mjs';
+import { VERSIONS, think } from './engine.js';
+
+ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.31.1/dist/';
+const $ = id => document.getElementById(id);
+const sessions = {};
+let game, human, gameId = 0;
+
+$('versions').insertAdjacentHTML('beforeend', Object.entries(VERSIONS).map(([v, info]) =>
+  `<label class="opt"><input type="radio" name="version" value="${v}" ${v === 'v4' ? 'checked' : ''}>
+   <span>VibeFish ${v} <small>${info.about}</small></span></label>`).join(''));
+const picked = name => document.querySelector(`input[name=${name}]:checked`).value;
+
+const cg = Chessground($('board'), { movable: { free: false, showDests: true }, events: { move: onHumanMove } });
+addEventListener('resize', () => cg.redrawAll());
+
+function dests() {
+  const d = new Map();
+  for (const m of game.moves({ verbose: true })) d.set(m.from, [...(d.get(m.from) || []), m.to]);
+  return d;
+}
+
+function sync() {
+  const last = game.history({ verbose: true }).at(-1);
+  const yourTurn = game.turn() === human[0] && !game.isGameOver();
+  cg.set({
+    fen: game.fen(), turnColor: game.turn() === 'w' ? 'white' : 'black', check: game.inCheck(),
+    lastMove: last && [last.from, last.to],
+    movable: { color: yourTurn ? human : undefined, dests: yourTurn ? dests() : new Map() },
+  });
+  $('moves').textContent = game.pgn({ maxWidth: 0 }).replace(/\[.*\]\s*/g, '');
+  if (game.isGameOver()) {
+    $('status').textContent = game.isCheckmate() ? (game.turn() === human[0] ? 'Checkmate. VibeFish wins.' : 'Checkmate. You win!')
+      : game.isStalemate() ? 'Draw by stalemate.' : game.isThreefoldRepetition() ? 'Draw by repetition.'
+      : game.isInsufficientMaterial() ? 'Draw: insufficient material.' : 'Draw by the 50-move rule.';
+  } else if (yourTurn) $('status').textContent = 'Your move.';
+}
+
+function onHumanMove(from, to) {
+  // shortcut: always promotes to a queen, add a picker if under-promotion matters
+  game.move({ from, to, promotion: 'q' });
+  sync();
+  botMove();
+}
+
+async function botMove() {
+  if (game.isGameOver() || game.turn() === human[0]) return;
+  const id = gameId, v = picked('version');
+  try {
+    if (!sessions[v]) {
+      $('status').textContent = `Loading VibeFish ${v} (${VERSIONS[v].mb} MB, once)…`;
+      sessions[v] = ort.InferenceSession.create(VERSIONS[v].file);
+    }
+    const session = await sessions[v];
+    if (id !== gameId) return;
+    $('status').textContent = `VibeFish ${v} is thinking…`;
+    await new Promise(r => setTimeout(r, 50));   // let the status paint before the forward pass
+    const move = await think(ort, session, v, game, Chess);
+    if (id !== gameId) return;
+    game.move(move);
+    sync();
+  } catch (e) {
+    delete sessions[v];
+    $('status').textContent = `Couldn't run VibeFish ${v}: ${e.message}`;
+  }
+}
+
+function newGame() {
+  gameId++;
+  game = new Chess();
+  human = picked('color');
+  cg.set({ orientation: human });
+  sync();
+  botMove();
+}
+$('new').onclick = newGame;
+newGame();
+</script>
+</body>
+</html>
