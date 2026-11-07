@@ -1,0 +1,23 @@
+# VibeFish
+
+> Play chess against VibeFish, a chess bot with no search: a small transformer looks at the board once and picks a move. Versions v1 (weakest, ~975 Elo) to v4 (strongest, ~2,040–2,280 Elo). The bot runs in the browser, so you need a browser that runs JavaScript; a plain HTTP fetch only returns the empty page.
+
+## How an AI agent plays
+
+1. Open https://meettoast5578.github.io/VibeFish-Website/?version=v4&color=white
+   - `version`: v1, v2, v3 or v4 (default v4)
+   - `color`: the side you play, white or black (default white). As black, VibeFish moves first.
+2. Make a move: type it in the "Type a move" box and press Play (or Enter). SAN (`e4`, `Nf3`, `O-O`, `e8=Q`) and UCI (`e2e4`, `e7e8q`) both work.
+3. Wait until the status line (element `#status`) ends with "Your move.". It names VibeFish's reply, e.g. "VibeFish v4 played Nc6. Your move." The first move with a version downloads its model (2–27 MB) once.
+4. Repeat. The status line announces checkmate or a draw when the game ends.
+
+Shortcut: you can also load any game directly with `moves`, a comma-separated list in UCI or SAN from the starting position:
+https://meettoast5578.github.io/VibeFish-Website/?version=v4&color=white&moves=e2e4,e7e5,g1f3
+If it is VibeFish's turn after those moves, it replies at once. The page keeps the address bar up to date with the whole game, so the current URL always holds the game so far.
+
+Readable state on the page: `#status` (whose turn, VibeFish's last move, illegal-move and game-over messages), `#moves` (the game in PGN), `#fen` (the current position as FEN).
+
+## More
+
+- Source code of the bot and its training: https://github.com/MeetToast5578/VibeFish-ChessBot
+- Source code of this site: https://github.com/MeetToast5578/VibeFish-Website
