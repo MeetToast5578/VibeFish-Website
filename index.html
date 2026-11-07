@@ -30,6 +30,9 @@
   .row { display: flex; gap: 16px; flex-wrap: wrap; }
   button { font: inherit; padding: 8px 16px; border-radius: 6px; border: 0; background: var(--accent); color: var(--bg); cursor: pointer; }
   #status { font-weight: 600; min-height: 1.5em; }
+  #moveform { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  #moveform input { font: inherit; padding: 7px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--fg); width: 12em; }
+  #fen { color: var(--muted); font-family: ui-monospace, monospace; font-size: 0.8rem; overflow-wrap: anywhere; margin: 0; }
   #moves { color: var(--muted); font-family: ui-monospace, monospace; font-size: 0.9rem; max-height: 220px; overflow-y: auto; margin: 0; }
   footer { margin-top: 32px; color: var(--muted); font-size: 0.9rem; }
 </style>
@@ -55,12 +58,19 @@
       </fieldset>
       <div><button id="new">New game</button></div>
       <div id="status" role="status" aria-live="polite"></div>
+      <form id="moveform">
+        <label for="move">Type a move</label>
+        <input id="move" autocomplete="off" placeholder="e4, Nf3 or e2e4">
+        <button>Play</button>
+      </form>
       <p id="moves"></p>
+      <p id="fen"></p>
     </div>
   </div>
   <footer>
     Source and training notes: <a href="https://github.com/MeetToast5578/VibeFish-ChessBot">VibeFish-ChessBot</a>.
     Elo figures are performance ratings against Stockfish's limited-strength levels. You can change the opponent mid-game.
+    AI agents: see <a href="llms.txt">llms.txt</a> for how to play.
   </footer>
 </main>
 <script type="module">
@@ -97,19 +107,38 @@ function sync() {
     movable: { color: yourTurn ? human : undefined, dests: yourTurn ? dests() : new Map() },
   });
   $('moves').textContent = game.pgn({ maxWidth: 0 }).replace(/\[.*\]\s*/g, '');
+  $('fen').textContent = 'FEN: ' + game.fen();
+  // the URL always holds the whole game, so a page reload or an AI agent can pick it up (see llms.txt)
+  const q = new URLSearchParams({ version: picked('version'), color: human });
+  if (game.history().length) q.set('moves', game.history({ verbose: true }).map(m => m.lan).join(','));
+  history.replaceState(null, '', '?' + q.toString().replaceAll('%2C', ','));
   if (game.isGameOver()) {
     $('status').textContent = game.isCheckmate() ? (game.turn() === human[0] ? 'Checkmate. VibeFish wins.' : 'Checkmate. You win!')
       : game.isStalemate() ? 'Draw by stalemate.' : game.isThreefoldRepetition() ? 'Draw by repetition.'
       : game.isInsufficientMaterial() ? 'Draw: insufficient material.' : 'Draw by the 50-move rule.';
-  } else if (yourTurn) $('status').textContent = 'Your move.';
+  } else if (yourTurn) {
+    $('status').textContent = notice + (bot && last ? `VibeFish ${bot} played ${last.san}. ` : '') + 'Your move.';
+    notice = '';
+  }
 }
+let bot, notice = '';   // version that made the last bot move; an error to show with the next "Your move."
 
 function onHumanMove(from, to) {
   // shortcut: always promotes to a queen, add a picker if under-promotion matters
-  game.move({ from, to, promotion: 'q' });
+  play({ from, to, promotion: 'q' });
+}
+
+function play(move) {   // SAN ("Nf3"), UCI ("g1f3") or {from, to}
+  if (game.isGameOver() || game.turn() !== human[0]) return;
+  try { game.move(move); } catch {
+    notice = `"${typeof move === 'string' ? move : move.from + move.to}" isn't a legal move here. `;
+    return sync();   // also puts a dragged piece back
+  }
+  bot = null;
   sync();
   botMove();
 }
+$('moveform').onsubmit = e => { e.preventDefault(); const m = $('move').value.trim(); $('move').value = ''; if (m) play(m); };
 
 async function botMove() {
   if (game.isGameOver() || game.turn() === human[0]) return;
@@ -126,6 +155,7 @@ async function botMove() {
     const move = await think(ort, session, v, game, Chess);
     if (id !== gameId) return;
     game.move(move);
+    bot = v;
     sync();
   } catch (e) {
     delete sessions[v];
@@ -133,16 +163,27 @@ async function botMove() {
   }
 }
 
-function newGame() {
+function newGame(moves = []) {
   gameId++;
   game = new Chess();
+  bot = null;
   human = picked('color');
   cg.set({ orientation: human });
+  for (const m of moves) {
+    try { game.move(m); } catch { notice = `The game from the link stops before "${m}": not a legal move there. `; break; }
+  }
   sync();
   botMove();
 }
-$('new').onclick = newGame;
-newGame();
+$('new').onclick = () => newGame();
+
+// ?version=v1..v4&color=white|black&moves=e2e4,e7e5 (UCI or SAN) starts from that game
+const url = new URLSearchParams(location.search);
+for (const [name, ok] of [['version', VERSIONS], ['color', { white: 1, black: 1 }]]) {
+  const val = url.get(name);
+  if (Object.hasOwn(ok, val ?? '')) document.querySelector(`input[name=${name}][value=${val}]`).checked = true;
+}
+newGame(url.get('moves')?.split(/[\s,]+/).filter(Boolean) ?? []);
 </script>
 </body>
 </html>
