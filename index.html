@@ -85,7 +85,7 @@ const sessions = {};
 let game, human, gameId = 0;
 
 $('versions').insertAdjacentHTML('beforeend', Object.entries(VERSIONS).map(([v, info]) =>
-  `<label class="opt"><input type="radio" name="version" value="${v}" ${v === 'v4' ? 'checked' : ''}>
+  `<label class="opt"><input type="radio" name="version" value="${v}" ${v === 'v4.1' ? 'checked' : ''}>
    <span>VibeFish ${v} <small>${info.about}</small></span></label>`).join(''));
 const picked = name => document.querySelector(`input[name=${name}]:checked`).value;
 
@@ -177,11 +177,11 @@ function newGame(moves = []) {
 }
 $('new').onclick = () => newGame();
 
-// ?version=v1..v4&color=white|black&moves=e2e4,e7e5 (UCI or SAN) starts from that game
+// ?version=v1..v4.1&color=white|black&moves=e2e4,e7e5 (UCI or SAN) starts from that game
 const url = new URLSearchParams(location.search);
 for (const [name, ok] of [['version', VERSIONS], ['color', { white: 1, black: 1 }]]) {
   const val = url.get(name);
-  if (Object.hasOwn(ok, val ?? '')) document.querySelector(`input[name=${name}][value=${val}]`).checked = true;
+  if (Object.hasOwn(ok, val ?? '')) document.querySelector(`input[name=${name}][value="${val}"]`).checked = true;
 }
 newGame(url.get('moves')?.split(/[\s,]+/).filter(Boolean) ?? []);
 </script>
