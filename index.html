@@ -177,7 +177,7 @@ function newGame(moves = []) {
 }
 $('new').onclick = () => newGame();
 
-// ?version=v1..v4.1&color=white|black&moves=e2e4,e7e5 (UCI or SAN) starts from that game
+// ?version=v1|v1.1|..|v4.1&color=white|black&moves=e2e4,e7e5 (UCI or SAN) starts from that game
 const url = new URLSearchParams(location.search);
 for (const [name, ok] of [['version', VERSIONS], ['color', { white: 1, black: 1 }]]) {
   const val = url.get(name);

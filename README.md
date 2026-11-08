@@ -1,7 +1,7 @@
 # VibeFish Website
 
 Play chess against every version of [VibeFish](https://github.com/MeetToast5578/VibeFish-ChessBot)
-(v1–v4.1) in the browser. The networks run client-side with ONNX Runtime Web, so the site is
+(v1, v1.1, v2, v3, v4, v4.1) in the browser. The networks run client-side with ONNX Runtime Web, so the site is
 static: no server, no GPU, nothing to pay for.
 
 ## Run locally
@@ -18,7 +18,7 @@ GitHub → Settings → Pages → Deploy from a branch → `main`, folder `/ (ro
 
 - `index.html`: the page (board: chessground, rules: chess.js, inference: onnxruntime-web, all from jsDelivr).
 - `engine.js`: the board encodings from the chessbot repo's `model.py` / `models/v1/model.py`, ported to JS, and the move choice (v4 and v4.1 blend in the action-value head, `--mix 2`, like `play.py`).
-- `models/v1–v4.1.onnx`: exported from the `.pt` checkpoints. Weights stay fp16 and are cast to fp32 inside the graph, so moves match `play.py`.
+- `models/*.onnx`: exported from the `.pt` checkpoints. Weights stay fp16 and are cast to fp32 inside the graph, so moves match `play.py`.
 - `tools/export.py`: re-export the models and the test fixture.
 - `tests/`: `npm test` replays 335 positions recorded from the Python bot and checks that the JS encodings and every version's move are identical.
 

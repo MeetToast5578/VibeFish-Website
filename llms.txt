@@ -5,7 +5,7 @@
 ## How an AI agent plays
 
 1. Open https://meettoast5578.github.io/VibeFish-Website/?version=v4.1&color=white
-   - `version`: v1, v2, v3, v4 or v4.1 (default v4.1)
+   - `version`: v1, v1.1, v2, v3, v4 or v4.1 (default v4.1)
    - `color`: the side you play, white or black (default white). As black, VibeFish moves first.
 2. Make a move: type it in the "Type a move" box and press Play (or Enter). SAN (`e4`, `Nf3`, `O-O`, `e8=Q`) and UCI (`e2e4`, `e7e8q`) both work.
 3. Wait until the status line (element `#status`) ends with "Your move.". It names VibeFish's reply, e.g. "VibeFish v4.1 played Nc6. Your move." The first move with a version downloads its model (2–27 MB) once.
