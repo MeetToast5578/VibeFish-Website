@@ -160,6 +160,7 @@ export function choose(game, policy, action, mix) {
 // the published versions; numbers from the chessbot README
 export const VERSIONS = {
   v1: { file: 'models/v1.onnx', mb: 1.8, mix: 0, about: '0.88M params · ~975 Elo' },
+  'v1.1': { file: 'models/v1.1.onnx', mb: 1.8, mix: 0, about: '0.89M params · v1 retrained, beats v2 89%' },
   v2: { file: 'models/v2.onnx', mb: 5.7, mix: 0, about: '2.9M params · ~1,350–1,650 Elo' },
   v3: { file: 'models/v3.onnx', mb: 13.3, mix: 0, about: '6.7M params · ~1,980 Elo' },
   v4: { file: 'models/v4.onnx', mb: 27.2, mix: 2, about: '13.6M params · ~2,040–2,280 Elo' },
