@@ -138,7 +138,7 @@ export function encodeV1(game) {
   return toks;
 }
 
-// best legal move given the network's outputs. mix > 0 blends in the action-value head (v4).
+// best legal move given the network's outputs. mix > 0 blends in the action-value head (v4, v4.1).
 export function choose(game, policy, action, mix) {
   const flip = game.turn() === 'w' ? 0 : 56;
   const legal = [...new Set(game.moves({ verbose: true })
@@ -163,6 +163,7 @@ export const VERSIONS = {
   v2: { file: 'models/v2.onnx', mb: 5.7, mix: 0, about: '2.9M params · ~1,350–1,650 Elo' },
   v3: { file: 'models/v3.onnx', mb: 13.3, mix: 0, about: '6.7M params · ~1,980 Elo' },
   v4: { file: 'models/v4.onnx', mb: 27.2, mix: 2, about: '13.6M params · ~2,040–2,280 Elo' },
+  'v4.1': { file: 'models/v4.1.onnx', mb: 27.2, mix: 2, about: '13.6M params · ~2,100 Elo, beats v4 57%' },
 };
 
 // one forward pass with an onnxruntime session -> move for chess.js

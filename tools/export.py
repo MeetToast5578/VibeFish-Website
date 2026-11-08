@@ -2,7 +2,7 @@
 
   python tools/export.py ../VibeFish-ChessBot
 
-Needs torch, chess, numpy, onnx (and onnxruntime for the check). Writes models/v1..v4.onnx and
+Needs torch, chess, numpy, onnx (and onnxruntime for the check). Writes models/v1..v4.1.onnx and
 tests/fixture.json. Weights are stored as fp16 (as in the .pt files) and cast to fp32 inside the
 graph, so the browser computes exactly what play.py computes, at half the download.
 """
@@ -76,9 +76,9 @@ v1 = m1.ChessGPT()
 v1.load_state_dict(torch.load(os.path.join(REPO, "models/v1/model.pt"), map_location="cpu"))
 v1.load_state_dict({k: v.half().float() for k, v in v1.state_dict().items()})  # match the fp16 export
 VERSIONS["v1"] = v1.eval()
-for v in ("v2", "v3", "v4"):
-    VERSIONS[v] = m2.load(os.path.join(REPO, f"models/vibefish_{v}.pt"))
-MIX = {"v1": 0, "v2": 0, "v3": 0, "v4": 2}    # README: v1-v3 policy only, v4 plays with --mix 2
+for v in ("v2", "v3", "v4", "v4.1"):
+    VERSIONS[v] = m2.load(os.path.join(REPO, f"models/vibefish_{v.replace('.', '_')}.pt"))
+MIX = {"v1": 0, "v2": 0, "v3": 0, "v4": 2, "v4.1": 2}    # README: v1-v3 policy only, v4 and v4.1 play with --mix 2
 
 for v, net in VERSIONS.items():
     path = os.path.join(OUT, "models", f"{v}.onnx")
