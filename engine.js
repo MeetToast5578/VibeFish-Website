@@ -81,12 +81,10 @@ function castling(game) {
 // how often the current position occurred (python-chess transposition key: pieces, turn, castling, legal ep)
 function repetitions(game, Chess) {
   const key = g => g.fen().split(' ').slice(0, 3).join(' ') + ' ' + legalEpFile(g);
-  const replay = new Chess(), target = key(game);
-  let n = key(replay) === target ? 1 : 0;
-  for (const m of game.history({ verbose: true })) {
-    replay.move(m);
-    if (key(replay) === target) n++;
-  }
+  const back = new Chess(), target = key(game);
+  back.loadPgn(game.pgn());   // a copy that keeps the start position, also when the game began from a FEN
+  let n = 0;
+  do if (key(back) === target) n++; while (back.undo());
   return n;
 }
 
@@ -160,7 +158,7 @@ export function choose(game, policy, action, mix) {
 // the published versions; numbers from the chessbot README
 export const VERSIONS = {
   v1: { file: 'models/v1.onnx', mb: 1.8, mix: 0, about: '0.88M params · ~975 Elo' },
-  'v1.1': { file: 'models/v1.1.onnx', mb: 1.8, mix: 0, about: '0.89M params · v1 retrained, beats v2 89%' },
+  'v1.1': { file: 'models/v1.1.onnx', mb: 1.8, mix: 0, about: '0.89M params · ~1,900 Elo' },
   v2: { file: 'models/v2.onnx', mb: 5.7, mix: 0, about: '2.9M params · ~1,350–1,650 Elo' },
   v3: { file: 'models/v3.onnx', mb: 13.3, mix: 0, about: '6.7M params · ~1,980 Elo' },
   v4: { file: 'models/v4.onnx', mb: 27.2, mix: 2, about: '13.6M params · ~2,040–2,280 Elo' },
